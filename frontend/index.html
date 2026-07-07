@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>To-Do App</title>
+<style>
+  body { font-family: sans-serif; max-width: 500px; margin: 60px auto; background: #f4f4f4; }
+  h1 { text-align: center; color: #333; }
+  .input-row { display: flex; gap: 8px; margin-bottom: 20px; }
+  input[type=text] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+  button { padding: 10px 16px; border: none; border-radius: 4px; background: #4a90d9; color: white; cursor: pointer; }
+  ul { list-style: none; padding: 0; }
+  li { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 14px; margin-bottom: 8px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+  li.done span { text-decoration: line-through; color: #999; }
+  .delete-btn { background: #d94a4a; }
+</style>
+</head>
+<body>
+<h1>My To-Do List</h1>
+<div class="input-row">
+  <input type="text" id="todoInput" placeholder="Add a new task...">
+  <button onclick="addTodo()">Add</button>
+</div>
+<ul id="todoList"></ul>
+
+<script>
+// Uses relative path so it works whether accessed directly or through Nginx proxy
+const API_URL = '/api/todos';
+
+async function fetchTodos() {
+  const res = await fetch(API_URL);
+  const todos = await res.json();
+  const list = document.getElementById('todoList');
+  list.innerHTML = '';
+  todos.forEach(todo => {
+    const li = document.createElement('li');
+    if (todo.done) li.classList.add('done');
+    li.innerHTML = `
+      <span onclick="toggleTodo(${todo.id})" style="cursor:pointer; flex:1;">${todo.title}</span>
+      <button class="delete-btn" onclick="deleteTodo(${todo.id})">Delete</button>
+    `;
+    list.appendChild(li);
+  });
+}
+
+async function addTodo() {
+  const input = document.getElementById('todoInput');
+  const title = input.value.trim();
+  if (!title) return;
+  await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title })
+  });
+  input.value = '';
+  fetchTodos();
+}
+
+async function toggleTodo(id) {
+  await fetch(`${API_URL}/${id}`, { method: 'PATCH' });
+  fetchTodos();
+}
+
+async function deleteTodo(id) {
+  await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+  fetchTodos();
+}
+
+fetchTodos();
+</script>
+</body>
+</html>
